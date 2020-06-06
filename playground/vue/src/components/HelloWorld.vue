@@ -1,24 +1,23 @@
 <template>
- <p>{{count}}</p>
- <h1>go vite vite</h1>
- <p>this also works as expected</p>
+  <p>{{ count }}</p>
+  <h1>hello world</h1>
 </template>
 
 <script>
 export default {
   name: 'HelloWorld',
   props: {
-    msg: String
+    msg: String,
   },
   data() {
     return {
-      count: 0
+      count: 0,
     }
   },
-  mounted(){
-    setInterval(()=>{
+  mounted() {
+    setInterval(() => {
       this.count++
     }, 1000)
-  }
+  },
 }
 </script>
