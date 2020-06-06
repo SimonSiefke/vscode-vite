@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "tsc -b -w",
-    "package": "tsc -b && npx vsce package"
+    "package": "tsc -b && npx vsce package",
+    "publish": "npm run package && npx vsce publish"
   },
   "publisher": "SimonSiefke",
   "activationEvents": [
@@ -14,6 +15,10 @@
   ],
   "engines": {
     "vscode": "^1.45.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:SimonSiefke/vscode-vite.git"
   },
   "keywords": [],
   "author": "",
