@@ -413,7 +413,7 @@ async function loadConfigFromBundledFile(
   return config
 }
 
-export function resolvePlugin(config: UserConfig, plugin: Plugin): UserConfig {
+function resolvePlugin(config: UserConfig, plugin: Plugin): UserConfig {
   return {
     ...config,
     alias: {

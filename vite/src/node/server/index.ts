@@ -138,6 +138,7 @@ function resolveHttpsConfig(httpsOption: ServerOptions) {
 }
 
 function readFileIfExits(value?: string | Buffer | any) {
+  console.log('read file if exists')
   if (value && !Buffer.isBuffer(value)) {
     try {
       return fs.readFileSync(path.resolve(value as string))

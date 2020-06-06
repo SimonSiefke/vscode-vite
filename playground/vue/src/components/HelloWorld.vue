@@ -1,7 +1,7 @@
 <template>
-  <h1>{{ msg }}</h1>
-  <button @click="count++">count is: {{ count }}</button>
-  <p>Edit <code>components/HelloWorld.vue</code> to test hot module replacement.</p>
+ <p>{{count}}</p>
+ <h1>go vite vite</h1>
+ <p>this also works as expected</p>
 </template>
 
 <script>
@@ -14,6 +14,11 @@ export default {
     return {
       count: 0
     }
+  },
+  mounted(){
+    setInterval(()=>{
+      this.count++
+    }, 1000)
   }
 }
 </script>

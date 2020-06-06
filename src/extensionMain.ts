@@ -1,19 +1,41 @@
-import { createServer, ServerPlugin } from '../vite'
+import { createServer, ServerPlugin, resolveConfig } from '../vite'
 import * as vscode from 'vscode'
 import { parse } from '@vue/compiler-sfc'
 import * as path from 'path'
 import * as fs from 'fs'
 
-const cache: {
-  [filePath: string]: string
-} = Object.create(null)
+const isValid = (filePath: string, text: string) => {
+  /*
+   * hmr still works event with these error codes
+   */
+  const notVueErrors = new Set([/* missing end tag */ 24])
+  if (filePath.endsWith('.vue')) {
+    const parseResult = parse(text)
+    if (parseResult.errors.length > 0) {
+      if (parseResult.errors.length > 1) {
+        console.log('no hmr due to errors')
+        return false
+      }
+      const firstError = parseResult.errors[0]
+      if (!notVueErrors.has(firstError.code)) {
+        console.log('no hmr due to error')
+        return false
+      }
+    }
+    console.log('vue reload')
+    return true
+  }
+  return true
+}
 
 const myPlugin: ServerPlugin = (ctx) => {
   const originalRead = ctx.read
   ctx.read = async (ctx, filePath) => {
-    if (filePath in cache) {
-      console.log('read from cache')
-      return cache[filePath]
+    let document = vscode.workspace.textDocuments.find(
+      (document) => document.uri.fsPath === filePath,
+    )
+    if (document) {
+      return document.getText()
     }
     return originalRead(ctx, filePath)
   }
@@ -22,56 +44,10 @@ const myPlugin: ServerPlugin = (ctx) => {
     if (event.document.uri.scheme !== 'file') {
       return
     }
-    console.log(event.document.uri.toString())
-    console.log('change')
     const filePath = event.document.uri.fsPath
     const text = event.document.getText()
-    cache[filePath] = text
-    /*
-     * hmr still works event with these error codes
-     */
-    const notErrors = new Set([/* missing end tag */ 24])
-    if (filePath.endsWith('.vue')) {
-      console.log('its vue')
-      const parseResult = parse(text)
-      console.log('parsed vue')
-      if (parseResult.errors.length > 0) {
-        if (parseResult.errors.length > 1) {
-          console.log('no hmr due to errors')
-          return
-        }
-        const firstError = parseResult.errors[0]
-        if (!notErrors.has(firstError.code)) {
-          console.log('no hmr due to error')
-          return
-        }
-      }
-      console.log('vue reload')
-      ctx.watcher.handleVueReload(ctx, filePath)
-    }
-  })
-  ctx.app.use(async (ctx, next) => {
-    // You can do pre-processing here - this will be the raw incoming requests
-    // before vite touches it.
-    if (ctx.path.endsWith('.scss')) {
-      // Note vue <style lang="xxx"> are supported by
-      // default as long as the corresponding pre-processor is installed, so this
-      // only applies to <link ref="stylesheet" href="*.scss"> or js imports like
-      // `import '*.scss'`.
-      console.log('pre processing: ', ctx.url)
-      ctx.type = 'css'
-      ctx.body = 'body { border: 1px solid red }'
-    }
-
-    // ...wait for vite to do built-in transforms
-    await next()
-
-    // Post processing before the content is served. Note this includes parts
-    // compiled from `*.vue` files, where <template> and <script> are served as
-    // `application/javascript` and <style> are served as `text/css`.
-    if (ctx.response.is('js')) {
-      console.log('post processing: ', ctx.url)
-      console.log(ctx.body) // can be string or Readable stream
+    if (isValid(filePath, text)) {
+      ctx.watcher.emit('change', filePath)
     }
   })
 }
@@ -84,10 +60,14 @@ export const activate = async (context: vscode.ExtensionContext) => {
   const workspaceFolder = workspaceFolders[0]
   const root = workspaceFolder.uri.fsPath
   const packageJsonPath = path.join(root, 'package.json')
+  const nodeModulesPath = path.join(root, 'node_modules')
+  if (!fs.existsSync(packageJsonPath) || !fs.existsSync(nodeModulesPath)) {
+    return
+  }
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath).toString())
 
   const options = {
-    vite: packageJson.scripts.dev === 'vite',
+    vite: packageJson.scripts && packageJson.scripts.dev === 'vite',
   }
   if (!options.vite) {
     return
@@ -95,12 +75,20 @@ export const activate = async (context: vscode.ExtensionContext) => {
   const outputChannel = vscode.window.createOutputChannel('vite')
   console.log = (...args: any[]) => outputChannel.appendLine(args.toString())
   console.error = (...args: any[]) => outputChannel.appendLine(args.toString())
-  // let userConfig = await resolveConfig(root, 'development')
-  const userConfig = {
-    configureServer: [myPlugin],
+  const userConfig = await resolveConfig(root, 'development')
+  if (Array.isArray(userConfig.configureServer)) {
+    userConfig.configureServer.unshift(myPlugin)
+  } else if (userConfig.configureServer) {
+    userConfig.configureServer = [myPlugin, userConfig.configureServer]
+  } else {
+    userConfig.configureServer = [myPlugin]
   }
+  userConfig.root = root
   try {
-    const server = createServer(userConfig).listen(3000)
+    console.log('starting server at ' + root)
+    const server = createServer(userConfig).listen(3000, () => {
+      console.log('started server')
+    })
     context.subscriptions.push({
       dispose: () => server.close(),
     })

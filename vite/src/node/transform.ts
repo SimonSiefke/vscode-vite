@@ -31,7 +31,6 @@ export function createServerTransformPlugin(
   return ({ app }) => {
     app.use(async (ctx, next) => {
       await next()
-
       const { path, query } = ctx
       let code: string | null = null
 
@@ -77,6 +76,7 @@ export function createBuildJsTransformPlugin(
   return {
     name: 'vite:transforms',
     async transform(code, id) {
+      console.log('transform' + id)
       const { path, query } = parseWithQuery(id)
       let result: string | Promise<string> = code
       for (const t of transforms) {
