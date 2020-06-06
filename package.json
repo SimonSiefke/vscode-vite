@@ -1,0 +1,28 @@
+{
+  "name": "vscode-vite",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/extensionMain.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "tsc -b -w"
+  },
+  "activationEvents": [
+    "*"
+  ],
+  "engines": {
+    "vscode": "^1.44.0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/vscode": "^1.45.1",
+    "typescript": "^3.9.5"
+  },
+  "dependencies": {
+    "@vue/compiler-sfc": "^3.0.0-beta.14",
+    "vite": "^0.20.5",
+    "vite-plugin-react": "^2.0.3"
+  }
+}
