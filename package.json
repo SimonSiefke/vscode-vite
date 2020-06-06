@@ -1,6 +1,6 @@
 {
-  "name": "vscode-vite",
-  "version": "1.0.0",
+  "name": "vite",
+  "version": "1.0.3",
   "description": "",
   "main": "dist/extensionMain.js",
   "scripts": {
@@ -22,7 +22,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "devDependencies": {
     "@types/vscode": "^1.45.1",
     "typescript": "^3.9.5"
