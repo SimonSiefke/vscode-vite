@@ -1,6 +1,7 @@
 {
   "name": "vite",
-  "version": "1.0.3",
+  "displayName": "Vite",
+  "version": "1.0.4",
   "description": "",
   "main": "dist/extensionMain.js",
   "scripts": {
