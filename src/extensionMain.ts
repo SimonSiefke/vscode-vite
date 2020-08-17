@@ -1,4 +1,4 @@
-import { createServer, ServerPlugin, resolveConfig } from '../vite'
+import { createServer, ServerPlugin, resolveConfig, ResolvedConfig } from 'vite'
 import * as vscode from 'vscode'
 import { parse } from '@vue/compiler-sfc'
 import * as path from 'path'
@@ -17,10 +17,10 @@ const isValid = (filePath: string, text: string) => {
         return false
       }
       const firstError = parseResult.errors[0]
-      if (!notVueErrors.has(firstError.code)) {
-        console.log('no hmr due to error')
-        return false
-      }
+      // if (!notVueErrors.has(firstError.code)) {
+      //   console.log('no hmr due to error')
+      //   return false
+      // }
     }
     console.log('vue reload')
     return true
@@ -28,17 +28,29 @@ const isValid = (filePath: string, text: string) => {
   return true
 }
 
-const myPlugin: ServerPlugin = (ctx) => {
-  const originalRead = ctx.read
-  ctx.read = async (ctx, filePath) => {
-    let document = vscode.workspace.textDocuments.find(
-      (document) => document.uri.fsPath === filePath,
-    )
-    if (document) {
-      return document.getText()
-    }
-    return originalRead(ctx, filePath)
+const customRead = (originalRead) => async (ctx, filePath) => {
+  let document = vscode.workspace.textDocuments.find(
+    (document) => document.uri.fsPath === filePath,
+  )
+  if (document) {
+    return document.getText()
   }
+  return originalRead(ctx, filePath)
+}
+
+const myPlugin: ServerPlugin = (ctx) => {
+  let _viteInternalCtx
+  ctx.app.middleware.splice(1, 0, async (ctx, next) => {
+    console.log('call middleware')
+    _viteInternalCtx = ctx
+    const originalRead = ctx.read
+    ctx.read = customRead(originalRead)
+    await next()
+  })
+
+  // ctx.app.middleware.unshift(ctx.app.middleware.pop())
+  // console.log(typeof ctx.app.middleware)
+
   // TODO dispose
   vscode.workspace.onDidChangeTextDocument((event) => {
     if (event.document.uri.scheme !== 'file') {
@@ -75,7 +87,13 @@ export const activate = async (context: vscode.ExtensionContext) => {
   const outputChannel = vscode.window.createOutputChannel('vite')
   console.log = (...args: any[]) => outputChannel.appendLine(args.toString())
   console.error = (...args: any[]) => outputChannel.appendLine(args.toString())
-  const userConfig = await resolveConfig(root, 'development')
+
+  const viteConfigPath = root + 'vite.config.js'
+
+  let userConfig: ResolvedConfig = {}
+  if (fs.existsSync(viteConfigPath)) {
+    userConfig = await resolveConfig('development', root + 'vite.config.js')
+  }
   if (Array.isArray(userConfig.configureServer)) {
     userConfig.configureServer.unshift(myPlugin)
   } else if (userConfig.configureServer) {
